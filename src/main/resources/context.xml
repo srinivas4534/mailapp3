@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+	xmlns:context="http://www.springframework.org/schema/context"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration.xsd
+		http://www.springframework.org/schema/integration/mail http://www.springframework.org/schema/integration/mail/spring-integration-mail.xsd
+		http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+		http://www.springframework.org/schema/integration/file http://www.springframework.org/schema/integration/file/spring-integration-file.xsd
+		http://www.springframework.org/schema/integration/stream http://www.springframework.org/schema/integration/stream/spring-integration-stream.xsd
+		http://www.springframework.org/schema/integration/jdbc	http://www.springframework.org/schema/integration/jdbc/spring-integration-jdbc.xsd"
+	xmlns:int="http://www.springframework.org/schema/integration"
+	xmlns:int-mail="http://www.springframework.org/schema/integration/mail"
+	xmlns:util="http://www.springframework.org/schema/util"
+	xmlns:int-file="http://www.springframework.org/schema/integration/file"
+	xmlns:int-stream="http://www.springframework.org/schema/integration/stream"
+	xmlns:int-jdbc="http://www.springframework.org/schema/integration/jdbc">
+
+	<context:component-scan base-package="com.muraai" />
+	<context:property-placeholder location="classpath:mysql.properties" />
+
+	<util:properties id="javaMailProperties">
+		<prop key="mail.pop3.socketFactory.fallback">false</prop>
+		<prop key="mail.debug">true</prop>
+		<prop key="mail.pop3.port">995</prop>
+		<prop key="mail.pop3.socketFactory.class">javax.net.ssl.SSLSocketFactory</prop>
+		<prop key="mail.pop3.socketFactory.port">995</prop>
+	</util:properties>
+
+	<int-mail:inbound-channel-adapter id="pop3ShouldDeleteTrue"
+		store-uri="pop3://srinivas.chinnam%40muraai.com:$R!nivas4534@pop.gmail.com/INBOX"
+		channel="receiveEmailChannel" should-delete-messages="false"
+		auto-startup="true"
+		java-mail-properties="javaMailProperties">
+		<int:poller fixed-rate="5000" max-messages-per-poll="5">
+			<!-- <int:transactional transaction-manager="syncProcessor" synchronization-factory="syncFactory" /> -->
+		</int:poller>
+
+
+	</int-mail:inbound-channel-adapter> 
+	<int:channel id="receiveEmailChannel" />
+	
+	
+	<int:channel id="printSqlResult" />
+	
+	
+
+	<int-jdbc:outbound-channel-adapter
+		channel="printSqlResult" data-source="dataSource"
+		query="${insert-query}">
+	</int-jdbc:outbound-channel-adapter>
+
+	<bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource"
+		destroy-method="close">
+		<property name="driverClassName" value="com.mysql.jdbc.Driver" />
+		<property name="url" value="jdbc:mysql://localhost:3306/ap_mail" />
+		<property name="username" value="root" />
+		<property name="password" value="" />
+	</bean>
+	
+	<int:channel id="getChannel"/>
+
+	<int-jdbc:inbound-channel-adapter channel="getChannel"
+		data-source="dataSource"
+		query="select * from sample">
+		<int:poller fixed-rate="5000" max-messages-per-poll="5"></int:poller>
+	</int-jdbc:inbound-channel-adapter>
+
+<!-- 	<int-mail:imap-idle-channel-adapter
+		id="customAdapter" store-uri="imaps://trainee.batch2016%40muraai.com:Muraai%401234@pop.gmail.com/INBOX"
+		channel="receiveEmailChannel" auto-startup="true" should-delete-messages="false"
+		java-mail-properties="javaMailProperties">
+		<int-mail:transactional transaction-manager="syncProcessor" synchronization-factory="syncFactory" />
+	</int-mail:imap-idle-channel-adapter> -->
+
+<!-- 	<int:transaction-synchronization-factory
+		id="syncFactory">
+		<int:after-commit expression="@syncProcessor.process(payload)" />
+	</int:transaction-synchronization-factory> -->
+
+	<!-- <bean id="mailman" class="com.muraai.Mailman" />
+	
+	<int:service-activator input-channel="receiveEmailChannel" ref="mailman"/>
+
+	
+	
+	<int-file:outbound-channel-adapter
+		channel="receiveEmailChannel" id="consumer-file-adapter" directory="file:d://outbound" /> -->
+
+
+</beans>
